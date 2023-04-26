@@ -23,4 +23,7 @@ The tool can create visualisations of trees using BioPython and toytree librarie
 ### Minor/extra tasks:
 * Create an online tool using ```Streamlit```,
 * adjust the algorithm for different tree orientations/types,
-* create online tree visualisations (toytree, biopython etc.),
+* create online tree visualisations (toytree, biopython etc.).
+
+### Presentation from April 2023
+[Link](https://docs.google.com/presentation/d/1AMbVaFBokSwe5lvQ4CdNTPvYihnjZUkXHr_3WURmY5s/edit?usp=sharing) to Google Slides.

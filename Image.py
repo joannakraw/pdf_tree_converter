@@ -4,6 +4,20 @@ import matplotlib.pyplot as plt
 import numpy as np
 from collections import defaultdict
 from shapely.geometry import LineString
+import matplotlib as mpl
+
+
+def convert_to_bnw(path):
+    """
+    Reads an image from a given path and converts it to black and white colorscale.
+    @param path: path to image file
+    @return: an image converted to black and white scale
+    """
+    image = cv2.imread(path)
+    gray_image = cv2.cvtColor(image, cv2.COLOR_BGR2GRAY)
+    (thresh, BnW_image) = cv2.threshold(gray_image, 125, 255, cv2.THRESH_BINARY)
+    BnW_image = np.where(BnW_image == 255, 0, 255)
+    return BnW_image
 
 
 class Image:
@@ -15,17 +29,14 @@ class Image:
         self.image_path = image_path
         self.orientation = orientation
 
-        self.BnW_image = self.convert_to_bnw()
+        self.BnW_image = convert_to_bnw(self.image_path)
         self.nonzero_pixels = self.get_nonzero_pixels()
 
-    def convert_to_bnw(self):
-        image = cv2.imread(self.image_path)
-        gray_image = cv2.cvtColor(image, cv2.COLOR_BGR2GRAY)
-        (thresh, BnW_image) = cv2.threshold(gray_image, 125, 255, cv2.THRESH_BINARY)
-        BnW_image = np.where(BnW_image == 255, 0, 255)
-        return BnW_image
-
     def get_nonzero_pixels(self):
+        """
+        Iterates over nonzero pixels from image numpy array
+        @return: a list of tuples of nonzero pixels
+        """
         nonzero_pixels = []
         for y, x in zip(list(self.BnW_image.nonzero()[0]), list(self.BnW_image.nonzero()[1])):
             nonzero_pixels.append((x, y))
@@ -36,6 +47,12 @@ class Image:
             coord="y",
             min_freq=10,
     ):
+        """
+        Finds most frequently occurring values x and y from nonzero pixels
+        @param coord: should be equal to "x" or "y", for which coordinate
+        @param min_freq: minimum number of occurrences of a point
+        @return: list of x or y points occurring > min_freq times in an image
+        """
         if coord == "x":
             occurrences = Counter([x for x, y in self.nonzero_pixels])
         elif coord == "y":
@@ -91,7 +108,7 @@ class Image:
         y_candidates = self.get_top_coordinates(coord='y', min_freq=min_freq)
         x_candidates = self.get_top_coordinates(coord='x', min_freq=min_freq)
 
-        vertical_lines, horizontal_lines = [], [] # {}, {}
+        vertical_lines, horizontal_lines = [], []  # {}, {}
         for y_candidate in y_candidates:
             # horizontal_lines[y_candidate] = self.find_line_coords_y(y_candidate, max_gap, min_line_length)
             horizontal_lines.extend(self.find_line_coords_y(y_candidate, max_gap, min_line_length))
@@ -105,55 +122,102 @@ class Image:
     def plot_lines(
             self,
             lines,
-            figsize=(10, 6)
+            figsize=(10, 6),
     ):
+        """
+        Plots a list of lines.
+        @param lines: list of lines, where each line is represented as x1, y1, x2, y2
+        @param figsize: figure size
+        @return: matplotlib plot with selected lines
+        """
         fig = plt.figure(figsize=figsize)
         for line in lines:
             if line:
                 x1, y1, x2, y2 = line
                 # x2, y2 = line[0][1]
                 plt.plot([x1, x2], [y1, y2], marker='o', color='b')
-        print(f"Here = {self.BnW_image.shape}")
-        xmin, xmax, ymin, ymax = 0, self.BnW_image.shape[0], 0, self.BnW_image.shape[1]
+        # print(f"Here = {self.BnW_image.shape}")
+        xmin, xmax, ymin, ymax = plt.axis()
+        # xmin, xmax, ymin, ymax = 0, self.BnW_image.shape[0], 0, self.BnW_image.shape[1]
         plt.ylim(ymax, ymin)
         plt.show()
-        return fig
 
-    def find_lines_intersections_leaves(self, filter=10, prolongue=2):
-        v_lines, h_lines = self.find_all_lines(max_gap=2, min_line_length=20, min_freq=10)
+    def find_lines_intersections_leaves(
+            self,
+            filter=10,
+            prolongue=2,
+            max_gap=2,
+            min_line_length=20,
+            min_freq=10,
+            t=5,
+            legend=None,
+            orientation='horizontal',
+    ):
+        # Find all lines
+        v_lines, h_lines = self.find_all_lines(max_gap=max_gap,
+                                               min_line_length=min_line_length,
+                                               min_freq=min_freq)
+        # Add horizontal and vertical lines and plot them
         all_lines = v_lines + h_lines
-        fig = self.plot_lines(all_lines)
+        self.plot_lines(all_lines)
+
         intersections = find_all_intersections(v_lines, h_lines, prolongue=prolongue)
-        plot_lines_and_intersections(all_lines, intersections, title='Lines and all intersections')
+        print("[Step 1] finding and plotting all intersections")
+        plot_lines_and_intersections(all_lines, intersections,
+                                     title='Lines and all intersections')
+
+        print("[Step 2] filtering internal nodes (line intersections)")
         filtered_intersections = filter_intersections(intersections, filter=filter)
-        plot_lines_and_intersections(all_lines, filtered_intersections, title='Lines and filtered intersections')
-        leaves_lines, leaves_points = find_leaves(v_lines, t=5)
+        plot_lines_and_intersections(all_lines, filtered_intersections,
+                                     title='Lines and filtered intersections')
+
+        if orientation == "horizontal":
+            leaves_lines, leaves_points = find_leaves_horizontal(h_lines, t=t)
+
+        if orientation == "vertical":
+            leaves_lines, leaves_points = find_leaves_vertical(v_lines, t=t)
+
+        print("[Step 3] filtering leaves (line endings)")
         filtered_leaves = filter_intersections(leaves_points, filter=filter)
-        plot_lines_and_intersections(all_lines, filtered_intersections+filtered_leaves, title='Lines and filtered intersections and leaves')
+        plot_lines_nodes_leaves(all_lines, nodes=filtered_intersections, leaves=filtered_leaves,
+                                title='Lines and filtered intersections and leaves', legend=legend)
+        print(f"[Summary] number of leaves = {len(filtered_leaves)}, "
+              f"number of nodes = {len(filtered_intersections)}")
+
         return v_lines, h_lines, filtered_intersections, filtered_leaves
 
+
+# Methods outside a class?
 def find_intersection(v_line, h_line):
+    """
+    Finds an intersection point of two lines using LineString from shapely library
+    @param v_line: first line
+    @param h_line: second line
+    @return: tuple with intersection point if any else None
+    """
     linestring1 = LineString([tuple(v_line[:2]), tuple(v_line[2:])])
     linestring2 = LineString([tuple(h_line[:2]), tuple(h_line[2:])])
     int_pt = linestring1.intersection(linestring2)
     if int_pt.is_empty:
         return None
     else:
-        return (int_pt.x, int_pt.y)
-    
+        return int_pt.x, int_pt.y
+
+
 def prolongue_v_line(v_line, prolongue):
     x1, y1, x2, y2 = v_line
-    if y1<y2:
-        return (x1, y1-prolongue, x2, y2+prolongue)
+    if y1 < y2:
+        return x1, y1 - prolongue, x2, y2 + prolongue
     else:
-        return (x1, y1+prolongue, x2, y2-prolongue)
-    
+        return x1, y1 + prolongue, x2, y2 - prolongue
+
+
 def prolongue_h_line(h_line, prolongue):
     x1, y1, x2, y2 = h_line
-    if x1<x2:
-        return (x1-prolongue, y1, x2+prolongue, y2)
+    if x1 < x2:
+        return x1 - prolongue, y1, x2 + prolongue, y2
     else:
-        return (x1+prolongue, y1, x2-prolongue, y2)
+        return x1 + prolongue, y1, x2 - prolongue, y2
     
 
 def find_all_intersections(v_lines, h_lines, prolongue):
@@ -166,14 +230,15 @@ def find_all_intersections(v_lines, h_lines, prolongue):
             if intersection is not None:
                 intersections.append(intersection)
     return intersections
-        
+
+
 def filter_intersections(intersections, filter):
     """
     t - stands for treshold
     """
     filtered_intersections = []
     seen = defaultdict(lambda: False)
-    print(f"Initial number of interesections = {len(intersections)}")
+    print(f"Initial number of intersections = {len(intersections)}")
     
     for inter in intersections:
         if not seen[inter]:
@@ -184,8 +249,9 @@ def filter_intersections(intersections, filter):
             for similar_intersection in similar:
                 seen[similar_intersection] = True
                 
-    print(f"After filtering number of interesections = {len(filtered_intersections)}")
+    print(f"After filtering number of intersections = {len(filtered_intersections)}")
     return filtered_intersections
+
 
 def plot_lines_and_intersections(
     lines, 
@@ -207,22 +273,86 @@ def plot_lines_and_intersections(
     xmin, xmax, ymin, ymax = plt.axis()
     plt.ylim(ymax, ymin)
     if legend:
-        plt.legend()
+        plt.legend(loc='center left', bbox_to_anchor=(1, 0.5))
     plt.title(title)
     plt.show()
 
-def find_leaves(v_lines, t=5):
-    v_lines_sorted = sorted(v_lines, key = lambda x: max(x[1], x[3]), reverse=True)
+
+def plot_lines_nodes_leaves(
+        lines,
+        leaves,
+        nodes,
+        figsize=(10, 6),
+        legend=None,
+        title="Lines and intersections"
+):
+    """
+    Plots tree branches (lines) with nodes and leaves separately.
+    @param lines: list of lines
+    @param leaves: list of tree leaves
+    @param nodes: list of tree internal nodes
+    @param figsize: figure size
+    @param legend: if you want to add legend
+    @param title: plot title
+    @return: a matplotlib plot
+    """
+    mpl.style.use("seaborn-whitegrid")
+    plt.figure(figsize=figsize)
+    for line in lines:
+        x = [line[0], line[2]]
+        y = [line[1], line[3]]
+        plt.plot(x, y, 'k-')
+
+    for i, point in enumerate(nodes):
+        if legend:
+            plt.plot(point[0], point[1], "o", label="Node " + str(i), markersize=10)
+        else:
+            plt.plot(point[0], point[1], "co", markersize=10)
+
+    for i, point in enumerate(leaves):
+        if legend:
+            plt.plot(point[0], point[1], "D", label="Leaf " + str(i), markersize=10)
+        else:
+            plt.plot(point[0], point[1], "mD", markersize=10)
+
+    xmin, xmax, ymin, ymax = plt.axis()
+    plt.ylim(ymax, ymin)
+    if legend:
+        plt.legend(loc='center left', bbox_to_anchor=(1, 0.5), fontsize=12)
+    plt.title(title, fontsize=16)
+    plt.show()
+
+
+def find_leaves_vertical(v_lines, t=5):
+    v_lines_sorted = sorted(v_lines, key=lambda x: max(x[1], x[3]), reverse=True)
     max_y = max(v_lines_sorted[0][1], v_lines_sorted[0][3])
     
     leaves_points, leaves_lines = [], []
     for line in v_lines_sorted:
         x1, y1, x2, y2 = line
-        if abs(max(y1, y2)- max_y) <= t:
+        if abs(max(y1, y2) - max_y) <= t:
             leaves_lines.append(line)
             max_ind = np.argmax([y1, y2])*2
             point = (line[max_ind], max(y1, y2))
             leaves_points.append(point)
         else:
             break
+    return leaves_lines, leaves_points
+
+
+def find_leaves_horizontal(h_lines, t=5):
+    h_lines_sorted = sorted(h_lines, key=lambda x: max(x[0], x[2]), reverse=True)
+    max_x = max(h_lines_sorted[0][0], h_lines_sorted[0][2])
+
+    leaves_points, leaves_lines = [], []
+    for line in h_lines_sorted:
+        x1, y1, x2, y2 = line
+        if abs(max(x1, x2) - max_x) <= t:
+            leaves_lines.append(line)
+            max_ind = np.argmax([x1, x2])
+            point = (max(x1, x2), line[max_ind])
+            leaves_points.append(point)
+        else:
+            break
+
     return leaves_lines, leaves_points

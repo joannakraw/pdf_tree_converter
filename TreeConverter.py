@@ -1,35 +1,45 @@
 import cv2
 from collections import Counter
 import matplotlib.pyplot as plt
+import matplotlib.patches as patches
 import numpy as np
 from collections import defaultdict
 from shapely.geometry import LineString
 import matplotlib as mpl
+from easyocr import Reader
 
+reader = Reader(lang_list=["en"])
 
-def convert_to_bnw(path):
+def convert_to_bnw(image):
     """
     Reads an image from a given path and converts it to black and white colorscale.
     @param path: path to image file
     @return: an image converted to black and white scale
     """
-    image = cv2.imread(path)
     gray_image = cv2.cvtColor(image, cv2.COLOR_BGR2GRAY)
     (thresh, BnW_image) = cv2.threshold(gray_image, 125, 255, cv2.THRESH_BINARY)
-    BnW_image = np.where(BnW_image == 255, 0, 255)
+    BnW_image = np.where(BnW_image > 200, 0, 255)
     return BnW_image
 
 
-class Image:
+class TreeImage:
     def __init__(
             self,
             image_path,
+            resize_factor=1,
             orientation="horizontal",
+            preprocessed=False
     ):
         self.image_path = image_path
         self.orientation = orientation
-
-        self.BnW_image = convert_to_bnw(self.image_path)
+        self.BnW_image = cv2.imread(self.image_path)
+        if resize_factor!=1:
+            self.BnW_image = cv2.resize(self.BnW_image, None, fx=resize_factor, fy=resize_factor)
+        if preprocessed:            
+            self.BnW_image = np.array(self.BnW_image)
+            self.BnW_image = np.where(self.BnW_image > 200, 0, 255)
+        else:
+            self.BnW_image = convert_to_bnw(self.BnW_image)
         self.nonzero_pixels = self.get_nonzero_pixels()
 
     def get_nonzero_pixels(self):
@@ -44,8 +54,8 @@ class Image:
 
     def get_top_coordinates(
             self,
-            coord="y",
-            min_freq=10,
+            coord,
+            min_freq
     ):
         """
         Finds most frequently occurring values x and y from nonzero pixels
@@ -101,20 +111,18 @@ class Image:
 
     def find_all_lines(
             self,
-            max_gap=2,
-            min_line_length=20,
-            min_freq=50,
+            max_gap,
+            min_line_length,
+            min_freq,
     ):
         y_candidates = self.get_top_coordinates(coord='y', min_freq=min_freq)
         x_candidates = self.get_top_coordinates(coord='x', min_freq=min_freq)
 
-        vertical_lines, horizontal_lines = [], []  # {}, {}
+        vertical_lines, horizontal_lines = [], []
         for y_candidate in y_candidates:
-            # horizontal_lines[y_candidate] = self.find_line_coords_y(y_candidate, max_gap, min_line_length)
             horizontal_lines.extend(self.find_line_coords_y(y_candidate, max_gap, min_line_length))
 
         for x_candidate in x_candidates:
-            # vertical_lines[x_candidate] = self.find_line_coords_x(x_candidate, max_gap, min_line_length)
             vertical_lines.extend(self.find_line_coords_x(x_candidate, max_gap, min_line_length))
 
         return vertical_lines, horizontal_lines
@@ -137,7 +145,6 @@ class Image:
                 # x2, y2 = line[0][1]
                 plt.plot([x1, x2], [y1, y2], marker='o', color='b')
         xmin, xmax, ymin, ymax = plt.axis()
-        # xmin, xmax, ymin, ymax = 0, self.BnW_image.shape[0], 0, self.BnW_image.shape[1]
         plt.ylim(ymax, ymin)
         plt.show()
 
@@ -185,6 +192,65 @@ class Image:
               f"number of nodes = {len(filtered_intersections)}")
 
         return v_lines, h_lines, filtered_intersections, filtered_leaves
+
+
+class Image:
+    tree_image: TreeImage
+    labels: list
+    boxes: list
+
+    def __init__(self, image_path, orientation="horizontal", resize_factor=1):
+        tree_image_path = image_path[:-4]+'_tree'+image_path[-4:]
+        print(f'Tree image will be saved to {tree_image_path}.')
+        self.lables, self.boxes = self.split_tree_and_labels(image_path, tree_image_path)
+        self.tree_image = TreeImage(image_path=tree_image_path, orientation=orientation,
+                                    preprocessed=True, resize_factor=resize_factor)
+
+    def split_tree_and_labels(self, image_path, tree_image_path):
+        img = cv2.imread(image_path)
+        img = cv2.resize(img, dsize=None, fx=2, fy=2)
+        img = cv2.cvtColor(img, cv2.COLOR_BGR2GRAY)
+        ret, thresh1 = cv2.threshold(img, 0, 255, cv2.THRESH_OTSU |cv2.THRESH_BINARY_INV)
+        if thresh1[0,0]<200:
+            thresh1 = np.where(thresh1>200, 0, 255)
+        
+        results = reader.readtext(img, min_size=5, 
+                                  mag_ratio=2, slope_ths=0.2)
+        labels = [i[1] for i in results if i[1]]
+        print('Retrieved labels:', *labels, sep=' ')
+
+        boxes = preprocess_boxes(results)
+        plot_image_with_boxes(thresh1, boxes, figsize=(16, 9))
+        for box in boxes:
+            (x, y), w, h = box
+            img[y:(y+h),x:(x+w)] = 255
+        cv2.imwrite(tree_image_path, img)
+        
+        plt.imshow(img, cmap=plt.cm.gray)
+        plt.show()
+        return labels, boxes
+
+def plot_image_with_boxes(image, boxes, figsize=(16, 9)):
+    fig, ax = plt.subplots(figsize=figsize)
+    ax.imshow(image, cmap=plt.cm.gray)
+    for box in boxes:
+        starting_point, width, height = box
+        rect = patches.Rectangle(starting_point, width, height, 
+                                 linewidth=1, edgecolor='r', facecolor='none')
+        ax.add_patch(rect)
+    plt.show()
+    return fig
+
+def preprocess_boxes(results):
+    boxes = []
+    for result in results:
+        box = result[0]
+        starting_point = tuple(box[0])
+        width = box[1][0] - box[0][0]
+        height = box[2][1] - box[0][1]
+        box = [starting_point, width, height]
+        boxes.append(box)
+    return boxes
 
 
 def find_intersection(v_line, h_line, t=5):

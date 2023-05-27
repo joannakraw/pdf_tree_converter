@@ -1,6 +1,7 @@
 import streamlit as st
 import pandas as pd
-from io import StringIO
+import cv2
+import numpy as np
 
 st.title(':deciduous_tree: Png Tree Converter')
 st.sidebar.success("Select a page")
@@ -15,20 +16,14 @@ st.write("This tool was created as a final project for ADP course at the Univers
 uploaded_file = st.file_uploader("Choose a file with a tree image")
 
 if uploaded_file is not None:
-    # To read file as bytes:
-    bytes_data = uploaded_file.getvalue()
-    st.write(bytes_data)
+    # Convert the file to an opencv image.
+    file_bytes = np.asarray(bytearray(uploaded_file.read()), dtype=np.uint8)
+    opencv_image = cv2.imdecode(file_bytes, 1)
 
-    # To convert to a string based IO:
-    stringio = StringIO(uploaded_file.getvalue().decode("utf-8"))
-    st.write(stringio)
+    st.write("Original image with phylogenetic tree")
+    st.image(opencv_image, channels="BGR")
 
-    # To read file as string:
-    string_data = stringio.read()
-    st.write(string_data)
-
-    # Can be used wherever a "file-like" object is accepted:
-    dataframe = pd.read_csv(uploaded_file)
-    st.write(dataframe)
 
 output_format = st.selectbox('Write tree to a format', ["newick", "phylo", "other"])
+resize_factor = st.text_input("Choose resize parameter", 1)
+st.write(f"Selected parameters = {output_format, resize_factor}")

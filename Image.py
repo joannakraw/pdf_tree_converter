@@ -136,7 +136,6 @@ class Image:
                 x1, y1, x2, y2 = line
                 # x2, y2 = line[0][1]
                 plt.plot([x1, x2], [y1, y2], marker='o', color='b')
-        # print(f"Here = {self.BnW_image.shape}")
         xmin, xmax, ymin, ymax = plt.axis()
         # xmin, xmax, ymin, ymax = 0, self.BnW_image.shape[0], 0, self.BnW_image.shape[1]
         plt.ylim(ymax, ymin)
@@ -145,11 +144,12 @@ class Image:
     def find_lines_intersections_leaves(
             self,
             filter=10,
-            prolongue=2,
+            prolong=2,
             max_gap=2,
             min_line_length=20,
             min_freq=10,
-            t=5,
+            leaves_threshold=5,
+            intersection_threshold=5,
             legend=None,
             orientation='horizontal',
     ):
@@ -161,7 +161,7 @@ class Image:
         all_lines = v_lines + h_lines
         self.plot_lines(all_lines)
 
-        intersections = find_all_intersections(v_lines, h_lines, prolongue=prolongue)
+        intersections = find_all_intersections(v_lines, h_lines, prolong=prolong, t=intersection_threshold)
         print("[Step 1] finding and plotting all intersections")
         plot_lines_and_intersections(all_lines, intersections,
                                      title='Lines and all intersections')
@@ -172,10 +172,10 @@ class Image:
                                      title='Lines and filtered intersections')
 
         if orientation == "horizontal":
-            leaves_lines, leaves_points = find_leaves_horizontal(h_lines, t=t)
+            leaves_lines, leaves_points = find_leaves_horizontal(h_lines, t=leaves_threshold)
 
         if orientation == "vertical":
-            leaves_lines, leaves_points = find_leaves_vertical(v_lines, t=t)
+            leaves_lines, leaves_points = find_leaves_vertical(v_lines, t=leaves_threshold)
 
         print("[Step 3] filtering leaves (line endings)")
         filtered_leaves = filter_intersections(leaves_points, filter=filter)
@@ -187,8 +187,7 @@ class Image:
         return v_lines, h_lines, filtered_intersections, filtered_leaves
 
 
-# Methods outside a class?
-def find_intersection(v_line, h_line):
+def find_intersection(v_line, h_line, t=5):
     """
     Finds an intersection point of two lines using LineString from shapely library
     @param v_line: first line
@@ -200,34 +199,37 @@ def find_intersection(v_line, h_line):
     int_pt = linestring1.intersection(linestring2)
     if int_pt.is_empty:
         return None
-    else:
+    if (abs(v_line[1] - int_pt.y) > t and abs(v_line[3] - int_pt.y) > t) or (abs(h_line[0] - int_pt.x) > t and abs(h_line[2] - int_pt.x) > t):
         return int_pt.x, int_pt.y
+    else:
+        return None
 
 
-def prolongue_v_line(v_line, prolongue):
+def prolong_v_line(v_line, prolong):
     x1, y1, x2, y2 = v_line
     if y1 < y2:
-        return x1, y1 - prolongue, x2, y2 + prolongue
+        return x1, y1 - prolong, x2, y2 + prolong
     else:
-        return x1, y1 + prolongue, x2, y2 - prolongue
+        return x1, y1 + prolong, x2, y2 - prolong
 
 
-def prolongue_h_line(h_line, prolongue):
+def prolong_h_line(h_line, prolong):
     x1, y1, x2, y2 = h_line
     if x1 < x2:
-        return x1 - prolongue, y1, x2 + prolongue, y2
+        return x1 - prolong, y1, x2 + prolong, y2
     else:
-        return x1 + prolongue, y1, x2 - prolongue, y2
+        return x1 + prolong, y1, x2 - prolong, y2
     
 
-def find_all_intersections(v_lines, h_lines, prolongue):
+def find_all_intersections(v_lines, h_lines, prolong, t=5):
     intersections = []
     for v_line in v_lines:
-        v_line_longer = prolongue_v_line(v_line, prolongue)
+        v_line_longer = prolong_v_line(v_line, prolong)
         for h_line in h_lines:
-            h_line_longer = prolongue_h_line(h_line, prolongue)
-            intersection = find_intersection(v_line_longer, h_line_longer)
+            h_line_longer = prolong_h_line(h_line, prolong)
+            intersection = find_intersection(v_line_longer, h_line_longer, t=t)
             if intersection is not None:
+                # print("A", v_line_longer, h_line, intersection)
                 intersections.append(intersection)
     return intersections
 
@@ -267,7 +269,7 @@ def plot_lines_and_intersections(
         plt.plot(x, y, 'b-')
     for i, point in enumerate(intersections):
         if legend:
-            plt.plot(point[0], point[1], "o", label="Point " + str(i), markersize=10)
+            plt.plot(point[0], point[1], "o", label="Point " + str(point), markersize=10)
         else:
             plt.plot(point[0], point[1], "ro")
     xmin, xmax, ymin, ymax = plt.axis()
@@ -324,6 +326,11 @@ def plot_lines_nodes_leaves(
 
 
 def find_leaves_vertical(v_lines, t=5):
+    """
+    @param v_lines: list of vertical lines where each line is represented as x1, y1, x2, y2
+    @param t: threshold for extending leaves in each direction for y
+    @return: list of leaves points and of leaves lines
+    """
     v_lines_sorted = sorted(v_lines, key=lambda x: max(x[1], x[3]), reverse=True)
     max_y = max(v_lines_sorted[0][1], v_lines_sorted[0][3])
     

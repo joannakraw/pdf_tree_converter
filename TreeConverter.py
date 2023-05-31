@@ -33,7 +33,7 @@ class TreeImage:
         self.image_path = image_path
         self.orientation = orientation
         self.BnW_image = cv2.imread(self.image_path)
-        if resize_factor!=1:
+        if resize_factor != 1:
             self.BnW_image = cv2.resize(self.BnW_image, None, fx=resize_factor, fy=resize_factor)
         if preprocessed:            
             self.BnW_image = np.array(self.BnW_image)
@@ -142,11 +142,10 @@ class TreeImage:
         for line in lines:
             if line:
                 x1, y1, x2, y2 = line
-                # x2, y2 = line[0][1]
                 plt.plot([x1, x2], [y1, y2], marker='o', color='b')
         xmin, xmax, ymin, ymax = plt.axis()
         plt.ylim(ymax, ymin)
-        plt.show()
+        return fig
 
     def find_lines_intersections_leaves(
             self,
@@ -186,12 +185,12 @@ class TreeImage:
 
         print("[Step 3] filtering leaves (line endings)")
         filtered_leaves = filter_intersections(leaves_points, filter=filter)
-        plot_lines_nodes_leaves(all_lines, nodes=filtered_intersections, leaves=filtered_leaves,
+        fig = plot_lines_nodes_leaves(all_lines, nodes=filtered_intersections, leaves=filtered_leaves,
                                 title='Lines and filtered intersections and leaves', legend=legend)
         print(f"[Summary] number of leaves = {len(filtered_leaves)}, "
               f"number of nodes = {len(filtered_intersections)}")
 
-        return v_lines, h_lines, filtered_intersections, filtered_leaves
+        return v_lines, h_lines, filtered_intersections, filtered_leaves, fig
 
 
 class Image:
@@ -202,7 +201,7 @@ class Image:
     def __init__(self, image_path, orientation="horizontal", resize_factor=1):
         tree_image_path = image_path[:-4]+'_tree'+image_path[-4:]
         print(f'Tree image will be saved to {tree_image_path}.')
-        self.lables, self.boxes = self.split_tree_and_labels(image_path, tree_image_path)
+        self.labels, self.boxes, self.fig_boxes = self.split_tree_and_labels(image_path, tree_image_path)
         self.tree_image = TreeImage(image_path=tree_image_path, orientation=orientation,
                                     preprocessed=True, resize_factor=resize_factor)
 
@@ -220,15 +219,13 @@ class Image:
         print('Retrieved labels:', *labels, sep=' ')
 
         boxes = preprocess_boxes(results)
-        plot_image_with_boxes(thresh1, boxes, figsize=(16, 9))
+        fig_boxes = plot_image_with_boxes(thresh1, boxes, figsize=(16, 9))
         for box in boxes:
             (x, y), w, h = box
-            img[y:(y+h),x:(x+w)] = 255
+            img[y:(y+h), x:(x+w)] = 255
         cv2.imwrite(tree_image_path, img)
         
-        plt.imshow(img, cmap=plt.cm.gray)
-        plt.show()
-        return labels, boxes
+        return labels, boxes, fig_boxes
 
 def plot_image_with_boxes(image, boxes, figsize=(16, 9)):
     fig, ax = plt.subplots(figsize=figsize)
@@ -238,7 +235,6 @@ def plot_image_with_boxes(image, boxes, figsize=(16, 9)):
         rect = patches.Rectangle(starting_point, width, height, 
                                  linewidth=1, edgecolor='r', facecolor='none')
         ax.add_patch(rect)
-    plt.show()
     return fig
 
 def preprocess_boxes(results):
@@ -328,7 +324,7 @@ def plot_lines_and_intersections(
     legend=None,
     title="Lines and intersections"
 ):
-    plt.figure(figsize=figsize)    
+    fig = plt.figure(figsize=figsize)
     for line in lines:
         x = [line[0], line[2]]
         y = [line[1], line[3]]
@@ -343,7 +339,7 @@ def plot_lines_and_intersections(
     if legend:
         plt.legend(loc='center left', bbox_to_anchor=(1, 0.5))
     plt.title(title)
-    plt.show()
+    return fig
 
 
 def plot_lines_nodes_leaves(
@@ -365,7 +361,7 @@ def plot_lines_nodes_leaves(
     @return: a matplotlib plot
     """
     mpl.style.use("seaborn-whitegrid")
-    plt.figure(figsize=figsize)
+    fig = plt.figure(figsize=figsize)
     for line in lines:
         x = [line[0], line[2]]
         y = [line[1], line[3]]
@@ -388,7 +384,7 @@ def plot_lines_nodes_leaves(
     if legend:
         plt.legend(loc='center left', bbox_to_anchor=(1, 0.5), fontsize=12)
     plt.title(title, fontsize=16)
-    plt.show()
+    return fig
 
 
 def find_leaves_vertical(v_lines, t=5):

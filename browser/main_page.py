@@ -1,17 +1,18 @@
 import importlib
 import os.path
 import streamlit as st
-import pandas as pd
 import cv2
-import numpy as np
 import sys
 sys.path.append('../')
 import importlib
 import TreeConverter as tc
+import NewickGenerator as ng
 importlib.reload(tc)
+importlib.reload(ng)
+import shutil
+st.set_option('deprecation.showPyplotGlobalUse', False)
 
 st.title(':deciduous_tree: Png Tree Converter')
-st.sidebar.markdown("### Parameters")
 
 st.write("This tool was created as a final project for ADP course at the University of Warsaw. "
          "It is designed to help analyse phylogenetic trees from publications that "
@@ -45,16 +46,22 @@ if fs is not None:
     tc_image = tc.Image(image_path=image_path, resize_factor=resize_factor)
     st.markdown("#### Detected labels:")
     st.write(', '.join(tc_image.labels))
-    # st.write(*tc_image.labels, sep=', ')
     st.pyplot(fig=tc_image.fig_boxes)
-    st.image(cv2.imread("temp/image_tree.png"), caption="Cropped image after text removal")
 
     v_lines, h_lines, internal_nodes, leaves, fig_nodes_leaves = tc_image.tree_image.find_lines_intersections_leaves(legend=False,
                                                                                                    orientation=orientation,
                                                                                                    intersection_threshold=intersection_threshold,
                                                                                                    min_freq=min_freq)
     st.pyplot(fig=fig_nodes_leaves)
+    newick = ng.generate_newick_str(leaves, internal_nodes, orientation=orientation, labels=tc_image.labels)
 
-# output_format = st.selectbox('Write tree to a format', ["newick", "phylo", "other"])
-# resize_factor = st.text_input("Choose resize parameter", 1)
-# st.write(f"Selected parameters = {output_format, resize_factor}")
+    st.markdown("### Result check")
+    fig_newick = ng.draw_newick(newick=newick)
+    st.pyplot(fig=fig_newick)
+
+    st.warning("If the tree plotted above is not correct, try tuning the parameters at the top of this page.")
+    st.markdown("### Download a tree in newick format")
+
+    st.download_button("Download tree", newick, file_name="newick_tree.nwk")
+    shutil.rmtree("temp/")
+

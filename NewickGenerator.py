@@ -188,6 +188,8 @@ def draw_newick(newick: str, path=None) -> None:
     newick = StringIO(newick)
     tree_newick = Phylo.read(newick, 'newick')
     fig = Phylo.draw(tree_newick, do_show=False)
+    plt.axis('off')
     if path is not None:
         plt.savefig(path)
-    return fig
+        return fig
+    return None

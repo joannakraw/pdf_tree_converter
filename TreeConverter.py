@@ -185,8 +185,7 @@ class TreeImage:
 
         print("[Step 3] filtering leaves (line endings)")
         filtered_leaves = filter_intersections(leaves_points, filter=filter)
-        fig = plot_lines_nodes_leaves(all_lines, nodes=filtered_intersections, leaves=filtered_leaves,
-                                title='Lines and filtered intersections and leaves', legend=legend)
+        fig = plot_lines_nodes_leaves(all_lines, nodes=filtered_intersections, leaves=filtered_leaves, legend=legend)
         print(f"[Summary] number of leaves = {len(filtered_leaves)}, "
               f"number of nodes = {len(filtered_intersections)}")
 
@@ -235,6 +234,7 @@ def plot_image_with_boxes(image, boxes, figsize=(16, 9)):
         rect = patches.Rectangle(starting_point, width, height, 
                                  linewidth=1, edgecolor='r', facecolor='none')
         ax.add_patch(rect)
+    plt.axis('off')
     return fig
 
 def preprocess_boxes(results):
@@ -348,7 +348,7 @@ def plot_lines_nodes_leaves(
         nodes,
         figsize=(10, 6),
         legend=None,
-        title="Lines and intersections"
+        title=None
 ):
     """
     Plots tree branches (lines) with nodes and leaves separately.
@@ -384,6 +384,7 @@ def plot_lines_nodes_leaves(
     if legend:
         plt.legend(loc='center left', bbox_to_anchor=(1, 0.5), fontsize=12)
     plt.title(title, fontsize=16)
+    plt.axis('off')
     return fig
 
 

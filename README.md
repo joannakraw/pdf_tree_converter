@@ -5,14 +5,13 @@ Aleksandra Cupriak, Agnieszka Kowalewska, Joanna Krawczyk
 
 
 ## Project description
-This is a final project for the Architecture of large projects in bioinformatics course. 
+This is a final project for the Architecture of Large Projects in Bioinformatics course. 
 The goal of the project is motivated by the struggle to analyse, convert and download phylogenetic trees 
 found in scientific articles. 
 
-We propose Png Tree Converter - an online / command line (to be decided later)
-tool converting phylogenetic trees in image format (.png) to newick format. 
+We propose Png Tree Converter - an online tool converting phylogenetic trees in image format (.png) to newick format. 
 Our approach is based on custom image processing algorithms.
-The tool can create visualisations of trees using BioPython library.
+As furthert improvement, the tool may create visualisations of trees using Biopython library.
 
 ### Main tasks:
 1. Extract dendrogram structure from .png image for binary, rooted trees oriented vertically 

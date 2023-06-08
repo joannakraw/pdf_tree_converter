@@ -39,7 +39,7 @@ if fs is not None:
     with open(image_path, 'wb') as f:
         f.write(fs.read())
 
-    st.write("Original image with phylogenetic tree")
+    st.markdown("#### Original image with phylogenetic tree")
     opencv_image = cv2.imread(image_path)
     st.image(opencv_image, channels="BGR")
 
@@ -52,11 +52,12 @@ if fs is not None:
                                                                                                    orientation=orientation,
                                                                                                    intersection_threshold=intersection_threshold,
                                                                                                    min_freq=min_freq)
+    st.markdown('#### Detected internal nodes and leaves')
     st.pyplot(fig=fig_nodes_leaves)
     newick = ng.generate_newick_str(leaves, internal_nodes, orientation=orientation, labels=tc_image.labels)
 
     st.markdown("### Result check")
-    fig_newick = ng.draw_newick(newick=newick)
+    fig_newick = ng.draw_newick(newick=newick, path='temp/newick_tree.svg')
     st.pyplot(fig=fig_newick)
 
     st.warning("If the tree plotted above is not correct, try tuning the parameters at the top of this page.")

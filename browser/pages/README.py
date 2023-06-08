@@ -3,6 +3,11 @@ import streamlit as st
 st.title("Manual")
 
 st.markdown('#### Pipeline description')
+"""
+1. The image provided by user is read using ```cv2``` library, scaled based on user-defined ```resize_factor``` parameter and converted to black and white scale.
+2. On the resized image, labels detection is done using reader function from ```easyocr``` library, we found bounding boxes for predicted labels and exract text from those boxes. Then we cover all text labels to get a tree image without text for nodes and leaves detection.
+
+"""
 
 st.markdown('#### Parameters description and tuning')
 """
@@ -12,7 +17,6 @@ st.markdown('#### Parameters description and tuning')
 * ```minimum frequency``` - int, default to 100 - as mentioned in pipeline description, we detect horizontal and vertical lines based on the number of non-zero pixels aligned horizontally/vertically in an array-representation of the image; for this purpose we consider only the rows/columns where the number of non-zero pixels is greater or equal ```minimum frequency```; if there are short lines in the input image that are not detected, try decreasing ```minimum frequency```, but this may increase the computation time.
 * ```instersection threshold``` - int - while detecting internal nodes, we consider all intersections between horizontal and vertical lines; we need to filter out the corners (intersections close to end of both of lines);  if for one of the intersecting lines, the distances (in pixels) from both ends to the intersection are greater than  ```instersection threshold```, then we consider this intersection as an internal node candidate;  if some corners are detected as internal nodes, try increasing ```instersection threshold```.
 * ```resize factor``` - float, default to 0.25 - scaling factor of the input image after text detection and removal, used for coping with varying resolution of input images;  increasing ```resize factor``` may thicken the detected lines, consider doing it if some lines are thin.
-
 """
 
 st.markdown('#### Output description')

@@ -30,6 +30,13 @@ class TreeImage:
             orientation="horizontal",
             preprocessed=False
     ):
+        """
+        Class for coping with tree images - for labels detection and text removal
+        :param image_path: path to image file
+        :param resize_factor: scaling factor of the input image
+        :param orientation: {'horizontal' or 'vertical'}, orientation of a tree
+        :param preprocessed: if the image is already preprocessed (is in black and white scale)
+        """
         self.image_path = image_path
         self.orientation = orientation
         self.BnW_image = cv2.imread(self.image_path)
@@ -77,6 +84,13 @@ class TreeImage:
             max_gap=2,
             min_line_length=20
     ):
+        """
+        Find line coordinates (start and end) for a horizontal line with y equal to candidate
+        :param candidate: value of y in the line
+        :param max_gap: maximum gap in the line to be still considered as one line
+        :param min_line_length: minimum line length
+        :return: list of horizontal line coordinates (start, end) with y = candidate
+        """
         x_candidates = sorted([x for x, y in self.nonzero_pixels if y == candidate])
         lines = []
         line = [x_candidates[0]]
@@ -96,6 +110,13 @@ class TreeImage:
             max_gap=2,
             min_line_length=20
     ):
+        """
+        Find line coordinates (start and end) for a vertical line with x equal to candidate
+        :param candidate: value of x in the line
+        :param max_gap: maximum gap in the line to be still considered as one line
+        :param min_line_length: minimum line length
+        :return: list of vertical line coordinates (start, end) with x = candidate
+        """
         y_candidates = sorted([y for x, y in self.nonzero_pixels if x == candidate])
         lines = []
         line = [y_candidates[0]]
@@ -197,7 +218,12 @@ class Image:
     labels: list
     boxes: list
 
-    def __init__(self, image_path, orientation="horizontal", resize_factor=1):
+    def __init__(
+            self,
+            image_path,
+            orientation="horizontal",
+            resize_factor=1
+    ):
         tree_image_path = image_path[:-4]+'_tree'+image_path[-4:]
         print(f'Tree image will be saved to {tree_image_path}.')
         self.labels, self.boxes, self.fig_boxes = self.split_tree_and_labels(image_path, tree_image_path)
@@ -251,9 +277,13 @@ def preprocess_boxes(results):
 
 def find_intersection(v_line, h_line, t=5):
     """
-    Finds an intersection point of two lines using LineString from shapely library
-    @param v_line: first line
-    @param h_line: second line
+    Find intersection between horizontal and vertical line.
+    An intersection is a common point of two lines.
+    A point lying closer than t to an endpoint of each of the two intersecting lines
+    is not considered an intersection.
+    @param v_line: first line (vertical)
+    @param h_line: second line (horizontal)
+    @param t: intersection threshold
     @return: tuple with intersection point if any else None
     """
     linestring1 = LineString([tuple(v_line[:2]), tuple(v_line[2:])])
@@ -268,6 +298,12 @@ def find_intersection(v_line, h_line, t=5):
 
 
 def prolong_v_line(v_line, prolong):
+    """
+    Prolong a vertical line by prolong number of pixels
+    :param v_line: vertical line coordinates
+    :param prolong: number of pixels to prolong a line
+    :return: coordinates of an elongated line
+    """
     x1, y1, x2, y2 = v_line
     if y1 < y2:
         return x1, y1 - prolong, x2, y2 + prolong
@@ -276,6 +312,13 @@ def prolong_v_line(v_line, prolong):
 
 
 def prolong_h_line(h_line, prolong):
+    """
+    Prolong a horizontal line by prolong number of pixels
+    :param h_line: horizontal line coordinates
+    :param prolong: number of pixels to prolong a line
+    :return: coordinates of an elongated line
+    """
+
     x1, y1, x2, y2 = h_line
     if x1 < x2:
         return x1 - prolong, y1, x2 + prolong, y2
@@ -298,7 +341,11 @@ def find_all_intersections(v_lines, h_lines, prolong, t=5):
 
 def filter_intersections(intersections, filter):
     """
-    t - stands for treshold
+    Filter intersections - find groups of intersections lying in proximity of filter
+    pixels from each other and replace them with one intersection with mean coordinates.
+    :param intersections: list of intersections
+    :param filter: int, parameter used to consider two intersections as neighbouring
+    :return:list of filtered intersections (replaced by group's means)
     """
     filtered_intersections = []
     seen = defaultdict(lambda: False)
@@ -324,6 +371,15 @@ def plot_lines_and_intersections(
     legend=None,
     title="Lines and intersections"
 ):
+    """
+    Plots tree branches (lines) with lines intersections
+    :param lines: list of line coordinates
+    :param intersections: list of intersecting points
+    :param figsize: figure size
+    :param legend: if you want to add legend
+    :param title: plot title
+    :return: a matplotlib figure
+    """
     fig = plt.figure(figsize=figsize)
     for line in lines:
         x = [line[0], line[2]]
@@ -390,9 +446,12 @@ def plot_lines_nodes_leaves(
 
 def find_leaves_vertical(v_lines, t=5):
     """
-    @param v_lines: list of vertical lines where each line is represented as x1, y1, x2, y2
-    @param t: threshold for extending leaves in each direction for y
-    @return: list of leaves points and of leaves lines
+    Find line ends aligned on the bottom of the image, find maximum y coordinate of vertical lines,
+    and then find all vertical line endings that are in no distant from this maximum y that t - threshold,
+    and save them as leaf candidates.
+    :param v_lines: list of vertical lines
+    :param t: threshold
+    :return: tuple with list of leaves lines and list leaves points
     """
     v_lines_sorted = sorted(v_lines, key=lambda x: max(x[1], x[3]), reverse=True)
     max_y = max(v_lines_sorted[0][1], v_lines_sorted[0][3])
@@ -411,6 +470,14 @@ def find_leaves_vertical(v_lines, t=5):
 
 
 def find_leaves_horizontal(h_lines, t=5):
+    """
+    Find line ends aligned on the right of the image, find maximum x coordinate of horizontal lines,
+    and then find all horizontal line endings that are in no distant from this maximum x that t - threshold,
+    and save them as leaf candidates.
+    :param h_lines: list of horizontal lines
+    :param t: threshold
+    :return: tuple with list of leaves lines and list leaves points
+    """
     h_lines_sorted = sorted(h_lines, key=lambda x: max(x[0], x[2]), reverse=True)
     max_x = max(h_lines_sorted[0][0], h_lines_sorted[0][2])
 

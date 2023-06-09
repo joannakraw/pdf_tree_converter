@@ -230,7 +230,11 @@ class Image:
         self.tree_image = TreeImage(image_path=tree_image_path, orientation=orientation,
                                     preprocessed=True, resize_factor=resize_factor)
 
-    def split_tree_and_labels(self, image_path, tree_image_path):
+    def split_tree_and_labels(
+            self,
+            image_path,
+            tree_image_path
+    ):
         img = cv2.imread(image_path)
         img = cv2.resize(img, dsize=None, fx=2, fy=2)
         img = cv2.cvtColor(img, cv2.COLOR_BGR2GRAY)
@@ -252,7 +256,18 @@ class Image:
         
         return labels, boxes, fig_boxes
 
-def plot_image_with_boxes(image, boxes, figsize=(16, 9)):
+def plot_image_with_boxes(
+        image,
+        boxes,
+        figsize=(16, 9),
+):
+    """
+    Plots an original image with text bounding boxes obtained from reader.
+    :param image: original image
+    :param boxes: list of boxes in format: starting point, width, height
+    :param figsize: figure size, default to (16,9)
+    :return: matplotlib figure with original image and plotted boxes
+    """
     fig, ax = plt.subplots(figsize=figsize)
     ax.imshow(image, cmap=plt.cm.gray)
     for box in boxes:
@@ -264,6 +279,12 @@ def plot_image_with_boxes(image, boxes, figsize=(16, 9)):
     return fig
 
 def preprocess_boxes(results):
+    """
+    Process output from reader.readtext function and save each box as a list with
+    starting point, box width and height.
+    :param results: output of easy reader.readtext function
+    :return: list of boxes in processed format
+    """
     boxes = []
     for result in results:
         box = result[0]
@@ -327,6 +348,16 @@ def prolong_h_line(h_line, prolong):
     
 
 def find_all_intersections(v_lines, h_lines, prolong, t=5):
+    """
+    Iterates over a list of vertical and horizontal lines. Elongates each line by
+    prolong parameter and finds intersection of elongated lines, and if there is any
+    it appends intersection to intersections list.
+    :param v_lines: list of vertical lines
+    :param h_lines: list of horizontal lines
+    :param prolong: number of pixels to prolongate each line
+    :param t: intersection threshold for intersection filtering (corner cases)
+    :return: list of all horizontal and vertical lines intersections
+    """
     intersections = []
     for v_line in v_lines:
         v_line_longer = prolong_v_line(v_line, prolong)
@@ -334,7 +365,6 @@ def find_all_intersections(v_lines, h_lines, prolong, t=5):
             h_line_longer = prolong_h_line(h_line, prolong)
             intersection = find_intersection(v_line_longer, h_line_longer, t=t)
             if intersection is not None:
-                # print("A", v_line_longer, h_line, intersection)
                 intersections.append(intersection)
     return intersections
 

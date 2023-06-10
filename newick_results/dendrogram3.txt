@@ -1,1 +1,0 @@
-(((((((((((Human,Brown_Bat),Bonobo),(Lemur,(Orca,Wild_Boar))),Chinchilla),Clawed_Frog),(Saker_Falcon,(Sea_Turtle,Alligator))),Ghostshark),Zebrafish),Northern_Pike),((Damselfish,Yellow_Croaker),(Tilapia,Maylandia))),Japanese_Rice_Fish)

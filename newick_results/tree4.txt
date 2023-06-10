@@ -1,1 +1,0 @@
-(Porifera,(Cnidaria,(((Echinodermata,Hemichordata),(Chordata,(Bryozoa,(Annelida,Brachiopoda)))),(Mollusca,((Arthropoda,Onychophora),Priapulida)))))

@@ -13,8 +13,8 @@ reader = Reader(lang_list=["en"])
 def convert_to_bnw(image):
     """
     Reads an image from a given path and converts it to black and white colorscale.
-    @param path: path to image file
-    @return: an image converted to black and white scale
+    :param path: path to image file
+    :return: an image converted to black and white scale
     """
     gray_image = cv2.cvtColor(image, cv2.COLOR_BGR2GRAY)
     (thresh, BnW_image) = cv2.threshold(gray_image, 125, 255, cv2.THRESH_BINARY)
@@ -52,7 +52,7 @@ class TreeImage:
     def get_nonzero_pixels(self):
         """
         Iterates over nonzero pixels from image numpy array
-        @return: a list of tuples of nonzero pixels
+        :return: a list of tuples of nonzero pixels
         """
         nonzero_pixels = []
         for y, x in zip(list(self.BnW_image.nonzero()[0]), list(self.BnW_image.nonzero()[1])):
@@ -66,9 +66,9 @@ class TreeImage:
     ):
         """
         Finds most frequently occurring values x and y from nonzero pixels
-        @param coord: should be equal to "x" or "y", for which coordinate
-        @param min_freq: minimum number of occurrences of a point
-        @return: list of x or y points occurring > min_freq times in an image
+        :param coord: should be equal to "x" or "y", for which coordinate
+        :param min_freq: minimum number of occurrences of a point
+        :return: list of x or y points occurring > min_freq times in an image
         """
         if coord == "x":
             occurrences = Counter([x for x, y in self.nonzero_pixels])
@@ -136,6 +136,16 @@ class TreeImage:
             min_line_length,
             min_freq,
     ):
+        """
+        Function finds all vertical and horizontal lines for rows and columns having more than
+        min_freq non zero pixels
+        :param max_gap: number of zero-pixels allowed between nonzero candidates so that
+        a line is not split in two
+        :param min_line_length: minimum length of a line candidate to be considered as a line
+        :param min_freq: minimum number of nonzero pixels in a row or column for line existence
+        investigation
+        :return: tuple of lists of vertical and horizontal lines
+        """
         y_candidates = self.get_top_coordinates(coord='y', min_freq=min_freq)
         x_candidates = self.get_top_coordinates(coord='x', min_freq=min_freq)
 
@@ -155,9 +165,9 @@ class TreeImage:
     ):
         """
         Plots a list of lines.
-        @param lines: list of lines, where each line is represented as x1, y1, x2, y2
-        @param figsize: figure size
-        @return: matplotlib plot with selected lines
+        :param lines: list of lines, where each line is represented as x1, y1, x2, y2
+        :param figsize: figure size
+        :return: matplotlib plot with selected lines
         """
         fig = plt.figure(figsize=figsize)
         for line in lines:
@@ -180,6 +190,27 @@ class TreeImage:
             legend=None,
             orientation='horizontal',
     ):
+        """
+        The function finds vertical and horizontal lines and their intersections. Then it
+        filters intersections, finds leaves and filters them with leaves_threshold and produces
+        final figure with all detected nodes.
+        :param filter: maximum proximity of intersections to be considered as similar
+        and replaced by their mean
+        :param prolong: number of pixels to elongate a line from both ends
+        :param max_gap: number of zero-pixels allowed between nonzero candidates so that
+        a line is not split in two
+        :param min_line_length: minimum length of a line candidate to be considered as a line
+        :param min_freq: minimum number of nonzero pixels in a row or column for line existence
+        investigation
+        :param leaves_threshold: maximum distance of a line end from maximum y or x value
+        (depending on orientation) to be considered as leaf
+        :param intersection_threshold: for corners filtering (see. find_intersection function)
+        :param legend: if None, don't create legend in plot_lines_nodes_leaves
+        function, else create legend
+        :param orientation: tree orientation ('horizontal' or 'vertical')
+        :return: tuple with 5 elements: list of vertical lines, list of horizontal lines,
+        list of internal nodes, list of leaves and a final figure with all nodes
+        """
         # Find all lines
         v_lines, h_lines = self.find_all_lines(max_gap=max_gap,
                                                min_line_length=min_line_length,
@@ -224,6 +255,12 @@ class Image:
             orientation="horizontal",
             resize_factor=1
     ):
+        """
+        Class for image preprocessing and text detection.
+        :param image_path: path to the image file
+        :param orientation: tree orientation ('horizontal' or 'vertical')
+        :param resize_factor: scaling factor of the input image after text detection and removal
+        """
         tree_image_path = image_path[:-4]+'_tree'+image_path[-4:]
         print(f'Tree image will be saved to {tree_image_path}.')
         self.labels, self.boxes, self.fig_boxes = self.split_tree_and_labels(image_path, tree_image_path)
@@ -235,14 +272,24 @@ class Image:
             image_path,
             tree_image_path
     ):
+        """
+        The function reads an image from image_path, converts it to a binary matrix.
+        Then it performs text detection, extraction and occlusion. Finally, it processes
+        the bounding boxes, plots an image with boxes and writes a final image with occluded
+        text to tree_image_path.
+        :param image_path: path to the input image
+        :param tree_image_path: path for saving image with occluded text
+        :return: a tuple with three elements: list of detected labels, list of
+        their bounding boxes and a plot with marked bounding boxes
+        """
         img = cv2.imread(image_path)
         img = cv2.resize(img, dsize=None, fx=2, fy=2)
         img = cv2.cvtColor(img, cv2.COLOR_BGR2GRAY)
         ret, thresh1 = cv2.threshold(img, 0, 255, cv2.THRESH_OTSU |cv2.THRESH_BINARY_INV)
-        if thresh1[0,0]<200:
-            thresh1 = np.where(thresh1>200, 0, 255)
-        
-        results = reader.readtext(img, min_size=5, 
+        if thresh1[0, 0] < 200:
+            thresh1 = np.where(thresh1 > 200, 0, 255)
+
+        results = reader.readtext(img, min_size=5,
                                   mag_ratio=2, slope_ths=0.2)
         labels = [i[1] for i in results if i[1]]
         print('Retrieved labels:', *labels, sep=' ')
@@ -253,7 +300,7 @@ class Image:
             (x, y), w, h = box
             img[y:(y+h), x:(x+w)] = 255
         cv2.imwrite(tree_image_path, img)
-        
+
         return labels, boxes, fig_boxes
 
 def plot_image_with_boxes(
@@ -302,10 +349,10 @@ def find_intersection(v_line, h_line, t=5):
     An intersection is a common point of two lines.
     A point lying closer than t to an endpoint of each of the two intersecting lines
     is not considered an intersection.
-    @param v_line: first line (vertical)
-    @param h_line: second line (horizontal)
-    @param t: intersection threshold
-    @return: tuple with intersection point if any else None
+    :param v_line: first line (vertical)
+    :param h_line: second line (horizontal)
+    :param t: intersection threshold
+    :return: tuple with intersection point if any else None
     """
     linestring1 = LineString([tuple(v_line[:2]), tuple(v_line[2:])])
     linestring2 = LineString([tuple(h_line[:2]), tuple(h_line[2:])])
@@ -438,13 +485,13 @@ def plot_lines_nodes_leaves(
 ):
     """
     Plots tree branches (lines) with nodes and leaves separately.
-    @param lines: list of lines
-    @param leaves: list of tree leaves
-    @param nodes: list of tree internal nodes
-    @param figsize: figure size
-    @param legend: if you want to add legend
-    @param title: plot title
-    @return: a matplotlib plot
+    :param lines: list of lines
+    :param leaves: list of tree leaves
+    :param nodes: list of tree internal nodes
+    :param figsize: figure size
+    :param legend: if you want to add legend
+    :param title: plot title
+    :return: a matplotlib plot
     """
     mpl.style.use("seaborn-whitegrid")
     fig = plt.figure(figsize=figsize)

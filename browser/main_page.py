@@ -5,8 +5,8 @@ import cv2
 import sys
 sys.path.append('../')
 import importlib
-import TreeConverter as tc
-import NewickGenerator as ng
+import src.TreeConverter as tc
+import src.NewickGenerator as ng
 importlib.reload(tc)
 importlib.reload(ng)
 import shutil

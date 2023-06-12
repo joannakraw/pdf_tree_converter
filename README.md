@@ -3,6 +3,15 @@
 ## Members
 Aleksandra Cupriak, Agnieszka Kowalewska, Joanna Krawczyk
 
+## Contents
+  * [Project description](#project-description)
+  * [Main tasks](#main-tasks)
+  * [Extra tasks](#extra-tasks)
+  * [Update](#update)
+  * [Pipeline description](#pipeline-description)
+  * [Requirements](#requirements)
+  * [Installation and launch](#installation-and-launch)
+  * [Project presentation](#project-presentation)
 
 ## Project description
 This is a final project for the Architecture of Large Projects in Bioinformatics course. 
@@ -36,12 +45,20 @@ but will fail as soon as we launch it on Streamlit Community Cloud
 ### Pipeline description
 ![pipeline.png](pipeline.png)
 
-### How to run Streamlit app locally?
-All the environment requirements are gathered in 
-```environment.yml``` file. In order to run a Streamlit application on your computer you should:
-1. Open the ```browser/``` folder in your terminal.
-2. Paste ```streamlit run main_page.py```.
-3. Access the application via the localhost link printed in your terminal.
+### Requirements
+
+  * [Miniconda](https://docs.conda.io/en/latest/miniconda.html)
+
+### Installation and launch
+All the environment requirements are gathered in ```environment.yml``` file. You can easily install a conda environment with all the necessary dependencies by running the command:
+
+    conda env create -f environment.yml
+
+To run Streamlit locally on your computer, you need to:
+1. Activate ```ptc``` conda environment
+2. Open the ```browser/``` folder in your terminal.
+3. Paste ```streamlit run main_page.py```.
+4. Access the application via the localhost link printed in your terminal.
 
 ### Project presentation
 [Link](https://docs.google.com/presentation/d/1AMbVaFBokSwe5lvQ4CdNTPvYihnjZUkXHr_3WURmY5s/edit?usp=sharing) to Google Slides.

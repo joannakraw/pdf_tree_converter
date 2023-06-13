@@ -1,4 +1,4 @@
-# png_tree_converter
+# Png Tree Converter
 
 ## Members
 Aleksandra Cupriak, Agnieszka Kowalewska, Joanna Krawczyk

@@ -127,7 +127,7 @@ def create_tree(leaves: list, nodes: list, orientation: str, labels: list = None
         nodes = rotate_coordinates(nodes)
         # Replace spaces in labels with underscores
     if labels:
-        labels = [label.replace(' ', '_') for label in labels]
+        labels = [label.replace(' ', '_').replace("(", "").replace(")", "") for label in labels]
 
     leaves = leaves_list2class(leaves, labels)
     nodes_y_asc = sorted(nodes, key=lambda x: x[1])

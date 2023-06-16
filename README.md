@@ -11,7 +11,6 @@ Aleksandra Cupriak, Agnieszka Kowalewska, Joanna Krawczyk
   * [Pipeline description](#pipeline-description)
   * [Requirements](#requirements)
   * [Installation and launch](#installation-and-launch)
-  * [Project presentation](#project-presentation)
 
 ## Project description
 This is a final project for the Architecture of Large Projects in Bioinformatics course. 
@@ -59,6 +58,3 @@ To run Streamlit locally on your computer, you need to:
 2. Open the ```browser/``` folder in your terminal.
 3. Paste ```streamlit run main_page.py```.
 4. Access the application via the localhost link printed in your terminal.
-
-### Project presentation
-[Link](https://docs.google.com/presentation/d/1AMbVaFBokSwe5lvQ4CdNTPvYihnjZUkXHr_3WURmY5s/edit?usp=sharing) to Google Slides.
